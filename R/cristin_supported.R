@@ -12,14 +12,15 @@
 #'   categories with a predefined itemType if remove.na is set to false,
 #'   Default: 'book'
 #' @param force.type Force all items to a predefined itemType, Default: NULL
-#' @param silent Running silent, running deep, Default: FALSE
+#' @param remove.duplicates Remove duplicates if TRUE, Default: TRUE
+#' @param silent c2z is noisy, tell it to be quiet, Default: FALSE
 #' @param log A list for storing log elements, Default: list()
 #' @return Zotero supported items with unsupported categories as NA
 #' @details Please see
 #'   \href{https://oeysan.github.io/c2z/}{https://oeysan.github.io/c2z/}
 #' @examples
 #' # Supported Cristin items
-#' print(CristinSupported(), n = 32)
+#' print(CristinSupported(), n = 5)
 #' @seealso
 #'  \code{\link[tibble]{tibble}}
 #' @rdname CristinSupported
@@ -30,6 +31,7 @@ CristinSupported <- \(data = NULL,
                       remove.na = TRUE,
                       replace.na = "book",
                       force.type = NULL,
+                      remove.duplicates = TRUE,
                       silent = FALSE,
                       log = list()) {
 
@@ -44,6 +46,7 @@ CristinSupported <- \(data = NULL,
   # Currently supported references
   supported.types <- c(
     anthologyaca= "book",
+    booktransl = "book",
     monographaca= "book",
     commentaryaca= "book",
     textbook= "book",
@@ -88,8 +91,11 @@ CristinSupported <- \(data = NULL,
 
   }
 
-  # Define cristin category type
+  # Define Cristin category type
   data$type <- GoFish(data$category$name$en)
+
+  # Define Cristin category code
+  data$code <-  GoFish(data$category$code)
 
   # Checking references message
   log <-  LogCat(
@@ -212,6 +218,7 @@ CristinSupported <- \(data = NULL,
       created = "created",
       last.modified = "last_modified",
       zotero = zotero,
+      remove.duplicates = remove.duplicates,
       silent = silent,
       log = log
     )

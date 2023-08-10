@@ -10,19 +10,20 @@ id="logo" title="Logo">
 <img src="man/figures/badge.webp" width="250px" alt="Logo" /> </a>
 </p>
 <p align="center">
-<a href="https://oeysan.github.io/c2z/news/index.html" id="news" title="News">
-<img src="https://img.shields.io/badge/News-2023.03.18 @ 22:20:11-purple.svg" alt="News"/>
-</a><br/><a href="#" id="cran" 
-title="CRAN Version">
-<img src="https://www.r-pkg.org/badges/version/c2z" alt="CRAN Version" />
-</a><a href="https://github.com/oeysan/c2z" id="github" title="GitHub Version">
-<img src="https://img.shields.io/badge/GitHub-0.1.4-red.svg?style=flat-square" alt="GitHub Version" />
-</a><br/><a href="https://oeysan.github.io/c2z/LICENSE.html" id="license" title="License">
-<img src="https://img.shields.io/badge/Licence-MIT-blue.svg" alt="License" />
-</a> <a href="https://github.com/oeysan/c2z/actions" id="rcmdcheck" 
-title="Build Status">
-<img src="https://github.com/oeysan/c2z/workflows/R-CMD-check/badge.svg" 
-alt="Build Status" /> </a>
+<a href="https://oeysan.github.io/c2z/news/index.html" id="news" 
+title="News"><img src="https://img.shields.io/badge/News-2023.08.09 @ 21:51:40-purple.svg" alt="News"/></a><br/><a 
+href="https://cran.r-project.org/package=c2z" id="cran" 
+title="CRAN Version"><img src="https://www.r-pkg.org/badges/version/c2z" 
+alt="CRAN Version"/></a>
+<a href="https://github.com/oeysan/c2z" id="github" 
+title="GitHub Version"><img src="https://img.shields.io/badge/GitHub-0.2.0-orange.svg" alt="GitHub Version" /></a>
+<br/><a href="https://oeysan.github.io/c2z/LICENSE.html" id="license" 
+title="License">
+<img src="https://img.shields.io/badge/Licence-MIT-blue.svg" 
+alt="License" /></a> <a href="https://github.com/oeysan/c2z/actions" 
+id="rcmdcheck" title="Build Status"><img 
+src="https://github.com/oeysan/c2z/workflows/R-CMD-check/badge.svg" 
+alt="Build Status" /></a>
 </p>
 
 # 
@@ -40,7 +41,14 @@ batch, references from Cristin, regjeringen.no, CRAN, ISBN (currently,
 Alma and Library of Congress), and DOI (currently, CrossRef and
 DataCite) to a Zotero library. Add, edit, copy, or delete items,
 including attachments and collections, and export references to BibLaTeX
-(and other formats) directly in *R*.
+(and other formats) directly in *R* (see Figure 1).
+
+<p align="center">
+<a href="https://oeysan.github.io/c2z/reference/figures/flowchart.svg">
+<img src="man/figures/flowchart.svg" alt = "c2z flowchart" /></a>
+</p>
+
+*Figure 1.* *c2z* flowchart.
 
 ### Who would want to use *c2z*?
 
@@ -79,6 +87,7 @@ you to keep track of publications, you could schedule a script (e.g.,
 Actions) to keep track of new publications from an institution or
 research group and email you (or the Man) recent publications on a
 monthly or weekly (or hourly) basis (e.g.,
+[emayili](https://github.com/datawookie/emayili/) or
 [mailR](https://github.com/rpremrajGit/mailR)). If you really feel like
 it you could use [Home
 Assistant](https://developers.home-assistant.io/docs/api/rest/) to play
@@ -107,6 +116,8 @@ your publications is registered on Cristin.
 - Search CrossRef, automatically and manually, by author(s), title, and
   year.
 - Augment Cristin references through ISBN, DOI, or CrossRef search.
+- Create month-to-month newsletter for registered publications in
+  Cristin.
 
 ## Dependencies
 
@@ -139,6 +150,15 @@ latest development version.
 devtools::install_github("oeysan/c2z")
 ```
 
+Please note that stable versions are hosted at CRAN, whereas GitHub
+versions are in active development.
+
+#### Stable version ([CRAN](https://CRAN.R-project.org/package=c2z))
+
+``` r
+utils::install.packages("c2z")
+```
+
 ## Example
 
 Also, please see the [magnificent
@@ -149,14 +169,19 @@ I work as an associate professor at a department of teacher education in
 Norway. Doing so, one of my responsibilities is surprisingly enough
 teaching. Even more surprising, most of the literature is in Norwegian,
 and in the form of monographs or anthologies. Unfortunately, Zotero is
-not well-adapted to importing Norwegian books through ISBN. In the
-example below, Imsen (2020) is imported using the Zotero magic wand
-(left) and *`c2z`* (right). Similarly, Zotero is unable to import
-Johannessen et al. (2021) using ISBN (cf. lookup failed). Evidently,
-Alma (47BIBSYS) is superior to Open WorldCat and similar when it comes
-to identifying (most) Norwegian books.
+not well-adapted to importing Norwegian books through ISBN (see Figure
+2). In the example below, Imsen (2020) is imported using the Zotero
+magic wand (left) and *`c2z`* (right). Similarly, Zotero is unable to
+import Johannessen et al. (2021) using ISBN (cf. lookup failed).
+Evidently, Alma (47BIBSYS) is superior to Open WorldCat and similar when
+it comes to identifying (most) Norwegian books.
 
-![*Figure 1.* Zotero vs. *c2z* example.](man/figures/readme_imsen.webp)
+<p align="center">
+<a href="https://oeysan.github.io/c2z/reference/figures/readme_imsen.webp">
+<img src="man/figures/readme_imsen.webp" alt = "c2z example" /></a>
+</p>
+
+*Figure 2.* Zotero vs. *c2z* example.
 
 The following example of *`c2z`* addresses this issue, and the `Zotero`
 function act as a wrapper by 1) connecting to the Zotero API, 2)
@@ -165,36 +190,53 @@ two ISBN identifiers (i.e. Imsen, 2020; Johannessen et al., 2021), 4)
 posting the items to the defined collection, 5) exporting the items as
 BibLaTeX and creating a bibliography in HTML format using the APA7
 reference style, and 6) cleaning up the example by deleting the
-collection and the two items. (The *R* output is rather noisy and can be
-disabled by adding `silent = TRUE`.)
+collection and the two items. The *R* output is rather noisy and can be
+disabled by adding `silent = TRUE`.
 
 ``` r
 library(c2z)
 example <- Zotero(
   collection.names = "c2z-example",
   library = TRUE,
+  library.type = "data,bib",
   create = TRUE,
   isbn = c("9788215040561", "9788279354048"),
   post = TRUE,
   post.collections = FALSE,
   export = TRUE,
-  include.bib = TRUE,
   style = "apa-single-spaced",
   delete = TRUE,
   delete.collections = TRUE,
   delete.items = TRUE,
   index = TRUE
 )
+#> Searching for collections 
+#> Found 0 collections 
+#> Adding 1 collection to library using 1 POST request 
+#> —————————————————Process: 100.00% (1/1). Elapsed time: 00:00:00—————————————————
+#> $post.status.collections
+#> # A tibble: 1 × 2
+#>   status  key     
+#>   <fct>   <chr>   
+#> 1 success V8BCATZM
+#> 
+#> $post.summary.collections
+#> # A tibble: 1 × 2
+#>   status  summary
+#>   <fct>     <int>
+#> 1 success       1
+#> 
+#> 
+#> The Zotero list contains: 1 collection, 0 items, and 0 attachments 
 #> Searching 2 items using ISBN 
-#> Adding 2 formated items to Zotero list 
 #> Adding 2 items to library using 1 POST request 
-#> -----------------Process: 100.00% (1/1). Elapsed time: 00:00:01-----------------
+#> —————————————————Process: 100.00% (1/1). Elapsed time: 00:00:01—————————————————
 #> $post.status.items
 #> # A tibble: 2 × 2
 #>   status  key     
 #>   <fct>   <chr>   
-#> 1 success PBIK974P
-#> 2 success TMIC9FQ9
+#> 1 success X3KYHW7U
+#> 2 success T9LJ727I
 #> 
 #> $post.summary.items
 #> # A tibble: 1 × 2
@@ -203,25 +245,20 @@ example <- Zotero(
 #> 1 success       2
 #> 
 #> 
-#> Found 0 subcollections 
+#> Searching for items using 1 collection 
 #> Found 2 items 
-#> Collection c2z-example (XIPCDDZ6) contains: 0 subcollections and 2 items 
+#> The Zotero list contains: 1 collection, 2 items, and 0 attachments 
 #> Found 2 `biblatex` references 
 #> Deleting 1 collection using 1 DELETE request 
-#> -----------------Process: 100.00% (1/1). Elapsed time: 00:00:00-----------------
+#> —————————————————Process: 100.00% (1/1). Elapsed time: 00:00:00—————————————————
 #> Deleting 2 items using 1 DELETE request 
-#> -----------------Process: 100.00% (1/1). Elapsed time: 00:00:00-----------------
+#> —————————————————Process: 100.00% (1/1). Elapsed time: 00:00:00—————————————————
 #> Creating index for items
-
-# Order the bibliography by creators (alphabetically) and date (descending)
-bibliography <- example$index |>
-  dplyr::arrange(citation, desc(date))
 ```
 
 The example will yield the following HTML output:
 
-<div
-style="font-size:80%; width: 80%; margin: 10px auto; border: 2px solid green; 
+<div style="font-size:80%; width: 80%; margin: 10px auto; border: 2px solid green; 
 padding: 5px;">
 
 <div class="csl-bib-body"

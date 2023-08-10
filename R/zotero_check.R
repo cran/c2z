@@ -11,6 +11,7 @@
 #'   format (e.g., last_modified)
 #' @param zotero A list with information on the specified Zotero library (e.g.,
 #'   id, API key, collections, and items), Default: NULL
+#' @param remove.duplicates Remove duplicates if TRUE, Default: TRUE
 #' @param silent c2z is noisy, tell it to be quiet, Default: FALSE
 #' @param log A list for storing log elements, Default: list()
 #' @return Returns non-duplicated data in a Zotero-type matrix (tibble)
@@ -53,22 +54,12 @@ ZoteroCheck <- \(data,
                  created,
                  last.modified,
                  zotero = NULL,
+                 remove.duplicates = TRUE,
                  silent = FALSE,
                  log = list()) {
 
   # Visible bindings
   extra <- NULL
-
-  # Function to extract extra ids
-  ZoteroIDS <- \(id.type, extra) {
-    # Define search parameters
-    search <- sprintf(".*%s: (\\w+).*", id.type)
-    # Exract ids from extra field
-    zotero.ids <- gsub(search, "\\1", extra)
-
-    return (zotero.ids)
-
-  }
 
   # Checking references message
   log <-  LogCat(
@@ -86,7 +77,7 @@ ZoteroCheck <- \(data,
   }
 
   # Fetch ids from zotero extras
-  zotero.ids <- ZoteroIDS(id.type, zotero$items$extra)
+  zotero.ids <- ZoteroId(id.type, zotero$items$extra)
 
   # Find unique items
   unique.data <- data |>
@@ -102,7 +93,7 @@ ZoteroCheck <- \(data,
     # Find duplicate items in zotero library
     zotero.duplicates <- zotero$items |>
       dplyr::filter(zotero.ids %in% data.ids) |>
-      dplyr::arrange(match(ZoteroIDS(id.type, extra), data.ids)) |>
+      dplyr::arrange(match(ZoteroId(id.type, extra), data.ids)) |>
       dplyr::distinct(extra, .keep_all = TRUE)
 
     # Find modified date of items
@@ -112,22 +103,40 @@ ZoteroCheck <- \(data,
     )
 
     # Check if data is modified since added to zotero
-    modified <- data.modified > zotero.duplicates$dateModified
+    if (remove.duplicates) {
+      modified <- data.modified > zotero.duplicates$dateModified
+    } else {
+      modified <- TRUE
+    }
 
     # Add zotero key, version and collection to modified data
     data.duplicates[modified, c("key", "version", "collections")] <-
       zotero.duplicates[modified, c("key", "version", "collections")]
 
     # Remove duplicates
-    unique.data <- dplyr::bind_rows(unique.data, data.duplicates[modified, ])
+    if (remove.duplicates) {
+      unique.data <- dplyr::bind_rows(unique.data, data.duplicates[modified, ])
+    } else {
+      unique.data <- dplyr::bind_rows(unique.data, data.duplicates)
+    }
 
     # Send message
     log <-  LogCat(sprintf(
       "Removed %s",
-      Pluralis(nrow(data) - nrow(unique.data), "duplicate", "duplicates")
+      Pluralis(nrow(data) - nrow(unique.data), "duplicate")
     ),
     silent = silent,
     log = log)
+
+    if (any(modified)) {
+      # Send message
+      log <-  LogCat(sprintf(
+        "Modified %s",
+        Pluralis(sum(modified), "item")
+      ),
+      silent = silent,
+      log = log)
+    }
 
   }
 

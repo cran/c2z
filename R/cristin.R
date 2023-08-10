@@ -56,7 +56,7 @@
 #' @param open.query Define your own query terms, Default: NULL
 #' @param all.results Find all results in query, Default: TRUE
 #' @param force Force is seldom wise, but sometimes..., Default: FALSE
-#' @param debug Let you test the Cristin API for errors, Default: FALSE
+#' @param remove.duplicates Remove duplicates if TRUE, Default: TRUE
 #' @param silent c2z is noisy, tell it to be quiet, Default: FALSE
 #' @param base.url The base url for the Cristin API, Default:
 #'   https://api.cristin.no/v2/results
@@ -87,16 +87,18 @@
 #' @param log A list for storing log elements, Default: list()
 #' @return A list with (exported) items from Cristin
 #' @details Please see
-#'   \href{https://oeysan.github.io/c2z/}{https://oeysan.github.io/c2z/}
+#' #'   \href{https://oeysan.github.io/c2z/}{https://oeysan.github.io/c2z/}
 #' @examples
 #' \donttest{
 #'   # Simple `Cristin` search by id
 #'   example <- Cristin(id = "840998")
 #'
 #'   # Print index using `ZoteroIndex`
-#'   ZoteroIndex(example$results) |>
-#'     dplyr::select(name) |>
-#'     print(width = 80)
+#'   if (any(nrow(example$results))) {
+#'     ZoteroIndex(example$results) |>
+#'       dplyr::select(name) |>
+#'       print(width = 80)
+#'   }
 #' }
 #' @seealso
 #'  \code{\link[httr]{http_error}}, \code{\link[httr]{GET}},
@@ -135,7 +137,7 @@ Cristin <- function (id  = NULL,
                      open.query = NULL,
                      all.results = TRUE,
                      force = FALSE,
-                     debug = FALSE,
+                     remove.duplicates = TRUE,
                      silent = FALSE,
                      base.url = "https://api.cristin.no/v2/results",
                      custom.url = NULL,
@@ -155,21 +157,13 @@ Cristin <- function (id  = NULL,
   # Visible bindings
   export <- n.filter <- unsupported.id <- missing.id <- date_published <-
     year_published <- firstName <- creatorType <- lastName <- filter.name <-
-    external.data <- results <- name <- key <- NULL
-
+    external.data <- results <- name <- key <- log.eta <- NULL
 
   # Trim arguments
   args <- as.list(environment())
   for (i in seq_along(args)) {
     arg <- if (is.character(args[[i]])) Trim(args[[i]]) else args[[i]]
     assign(names(args[i]), arg)
-  }
-
-  # if debug test status of Cristin API
-  if (debug) {
-    if(httr::http_error(httr::GET(base.url))) {
-      stop("Cristin API appears offline", call. = FALSE)
-    }
   }
 
   # Set per_page to Cristin limit (1000) if per_page > 1000
@@ -220,29 +214,30 @@ Cristin <- function (id  = NULL,
 
   # API query
   if (is.null(custom.url)) {
-    json.data <- GoFish(
+    httr.get <- Online(
       httr::RETRY("GET", base.url, query = query.list, quiet = TRUE),
-      stats::setNames(list(404), "status_code")
+      message = "Cristin URL",
+      silent = TRUE
     )
   } else {
-    json.data <- GoFish(
+    httr.get <- Online(
       httr::RETRY("GET", custom.url, quiet = TRUE),
-      stats::setNames(list(404), "status_code")
+      message = "Zotero URL",
+      silent = TRUE
     )
   }
+
+  # Add to log
+  log <- append(log, httr.get$log)
+
   # Log and return error if status code != 200
-  if (json.data$status_code != "200") {
-    log <-  LogCat(
-      ErrorCode(json.data$status_code),
-      silent = silent,
-      log = log
-    )
+  if (httr.get$error) {
     return (log)
   }
 
   # Number of results
   total.results <- n.results <- GoFish(
-    as.numeric(json.data$headers[["x-total-count"]])
+    as.numeric(httr.get$data$headers[["x-total-count"]])
   )
   if (is.na(total.results)) total.results <- n.results <- 1
   if (any(max.results < total.results)) total.results <- max.results
@@ -250,7 +245,7 @@ Cristin <- function (id  = NULL,
   # Log number of results
   log <-  LogCat(
     sprintf(
-      "Found %s", Pluralis(total.results, "result", "results")
+      "Found %s", Pluralis(total.results, "result")
     ),
     silent = silent,
     log = log
@@ -267,7 +262,7 @@ Cristin <- function (id  = NULL,
   }
 
   # Format data
-  results <- JsonToTibble(json.data)
+  results <- JsonToTibble(httr.get$data)
 
   # Filter out articles not present in `filter` if defined.
   if (!is.null(filter)) {
@@ -286,6 +281,7 @@ Cristin <- function (id  = NULL,
       remove.na = remove.na,
       replace.na = replace.na,
       force.type = force.type,
+      remove.duplicates = remove.duplicates,
       silent = silent,
       log = log
     )
@@ -303,7 +299,7 @@ Cristin <- function (id  = NULL,
     log <-  LogCat(
       sprintf(
         "The current query contains only %s",
-        Pluralis(max(pages), "page", "pages")
+        Pluralis(max(pages), "page")
       ),
       silent = silent,
       fatal = TRUE,
@@ -361,7 +357,7 @@ Cristin <- function (id  = NULL,
     log <-  LogCat(
       sprintf(
         "The provided query is limited to a maximum of %s" ,
-        Pluralis(max.results, "result", "results")
+        Pluralis(max.results, "result")
       ),
       silent = silent,
       log = log
@@ -403,13 +399,22 @@ Cristin <- function (id  = NULL,
       query.list$page <- remaining.pages[i]
 
       # Fetch remaining data
-      json.data <- GoFish(
+      httr.get <- Online(
         httr::RETRY("GET", base.url, query = query.list, quiet = TRUE),
-        stats::setNames(list(404), "status_code")
+        silent = TRUE,
+        message = "Cristin URL"
       )
 
+     # Add to log
+      log <- append(log, httr.get$log)
+
+      # Log and skip skip iteration upon error
+      if (httr.get$error) {
+        next
+      }
+
       # Append data to list
-      add.results <- JsonToTibble(json.data)
+      add.results <- JsonToTibble(httr.get$data)
 
       # Filter out articles not present in `filter` if defined.
       if (!is.null(filter)) {
@@ -428,6 +433,7 @@ Cristin <- function (id  = NULL,
           remove.na = remove.na,
           replace.na = replace.na,
           force.type = force.type,
+          remove.duplicates = remove.duplicates,
           silent = TRUE,
           log = log
         )
@@ -482,7 +488,7 @@ Cristin <- function (id  = NULL,
     log <-  LogCat(
       sprintf(
         "Filtered out %s." ,
-        Pluralis(n.filter, "result", "results")
+        Pluralis(n.filter, "result")
       ),
       silent = silent,
       log = log
@@ -494,7 +500,7 @@ Cristin <- function (id  = NULL,
     log <-  LogCat(
       sprintf(
         "Filtered out %s. See `$unsupported.id`." ,
-        Pluralis(length(unsupported.id), "result", "results")
+        Pluralis(length(unsupported.id), "result")
       ),
       silent = silent,
       log = log
@@ -506,7 +512,7 @@ Cristin <- function (id  = NULL,
     log <-  LogCat(
       sprintf(
         "Filtered out %s. See `$missing.id`." ,
-        Pluralis(length(missing.id), "result", "results")
+        Pluralis(length(missing.id), "result")
       ),
       silent = silent,
       log = log
@@ -531,7 +537,7 @@ Cristin <- function (id  = NULL,
 
   return (
     list(
-      data.cache = json.data,
+      data.cache = httr.get$data,
       results = results,
       n.results = n.results,
       n.filter = n.filter,

@@ -42,10 +42,9 @@ ZoteroDelete <- \(zotero,
   MassDelete <- \(zotero,
                   append.collections = FALSE,
                   delete.limit,
-                  force = FALSE,
                   silent = FALSE) {
 
-    # Find latest zotero version if force set to TRUE
+    # Find latest Zotero version
     version <- ZoteroGet(
       Zotero(
         user = zotero$user,
@@ -73,11 +72,11 @@ ZoteroDelete <- \(zotero,
 
     # JUST SOME MORE POINTLESS LINGUISTICS
     if (append.collections) {
-      items <- Pluralis(total.data, "collection", "collections")
+      items <- Pluralis(total.data, "collection")
     } else {
-      items <- Pluralis(total.data, "item", "items")
+      items <- Pluralis(total.data, "item")
     }
-    delete <- Pluralis(length(metadata), "DELETE request", "DELETE requests")
+    delete <- Pluralis(length(metadata), "DELETE request")
 
     # Create message
     delete.message <- sprintf("Deleting %s using %s", items, delete)
@@ -98,15 +97,13 @@ ZoteroDelete <- \(zotero,
       if (append.collections) {
         items <- Pluralis(
           length(metadata[[i]]$key),
-          "collection",
-          "collections"
+          "collection"
         )
         query.type <- "collectionKey"
       } else {
         items <- Pluralis(
           length(metadata[[i]]$key),
-          "item",
-          "items"
+          "item"
         )
         query.type <- "itemKey"
       }
@@ -120,25 +117,26 @@ ZoteroDelete <- \(zotero,
       )
 
       # Delete collections/items from library
-      json.delete <- httr::RETRY(
-        "DELETE",
-        ZoteroUrl(zotero$url,
-                  append.collections = append.collections,
-                  api = zotero$api),
-        json.header,
-        query = query,
-        quiet = TRUE)
-
-      # Log deleted message
-      if (json.delete$status_code == "204") {
-
-        message <- sprintf("Succesfully deleted %s", items)
-        zotero$log <- append(zotero$log, message)
-
-      }
+      httr.delete <- Online(
+        httr::RETRY(
+          "DELETE",
+          ZoteroUrl(
+            zotero$url,
+            append.collections = append.collections,
+            api = zotero$api
+          ),
+          json.header,
+          query = query,
+          quiet = TRUE),
+        silent = TRUE,
+        message = "Zotero delete"
+      )
+      zotero$log <- append(zotero$log, httr.delete$log)
 
       # Update version
-      version <- json.delete$headers$`last-modified-version`
+      if (!httr.delete$error) {
+        version <- httr.delete$data$headers$`last-modified-version`
+      }
 
       # Estimate time of arrival
       log.eta <-
@@ -148,13 +146,12 @@ ZoteroDelete <- \(zotero,
               length(metadata)),
           silent = silent,
           flush = TRUE,
-          log = log,
           append.log = FALSE
         )
     }
 
     # Append eta log to log
-    zotero$log <- append(zotero$log,log.eta)
+    zotero$log <- append(zotero$log, log.eta)
 
     return (zotero)
 
@@ -174,13 +171,15 @@ ZoteroDelete <- \(zotero,
     }
 
     # Select all collections and items
-    zotero <- Zotero(user = zotero$user,
-                     id = zotero$id,
-                     api = zotero$api,
-                     log = zotero$log,
-                     library = TRUE,
-                     force = TRUE,
-                     silent = silent)
+    zotero <- Zotero(
+      user = zotero$user,
+      id = zotero$id,
+      api = zotero$api,
+      log = zotero$log,
+      library = TRUE,
+      force = TRUE,
+      silent = silent
+    )
 
     # Set delete.collections and delete.items to TRUE
     delete.collections <- TRUE
@@ -196,7 +195,7 @@ ZoteroDelete <- \(zotero,
         log = zotero$log
       )
     } else {
-      zotero <- MassDelete(zotero, TRUE, delete.limit, force, silent)
+      zotero <- MassDelete(zotero, TRUE, delete.limit, silent)
     }
   }
   # Delete items if delete.items = TRUE
@@ -208,7 +207,7 @@ ZoteroDelete <- \(zotero,
         log = zotero$log
       )
     } else {
-      zotero <- MassDelete(zotero, FALSE, delete.limit, force, silent)
+      zotero <- MassDelete(zotero, FALSE, delete.limit, silent)
     }
   }
 

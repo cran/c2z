@@ -35,7 +35,7 @@ Cristin(
   open.query = NULL,
   all.results = TRUE,
   force = FALSE,
-  debug = FALSE,
+  remove.duplicates = TRUE,
   silent = FALSE,
   base.url = "https://api.cristin.no/v2/results",
   custom.url = NULL,
@@ -139,7 +139,7 @@ with fewer fields will be returned, Default: all}
 
 \item{force}{Force is seldom wise, but sometimes..., Default: FALSE}
 
-\item{debug}{Let you test the Cristin API for errors, Default: FALSE}
+\item{remove.duplicates}{Remove duplicates if TRUE, Default: TRUE}
 
 \item{silent}{c2z is noisy, tell it to be quiet, Default: FALSE}
 
@@ -193,7 +193,7 @@ Use search parameters for the Cristin API and return the results
 }
 \details{
 Please see
-  \href{https://oeysan.github.io/c2z/}{https://oeysan.github.io/c2z/}
+#'   \href{https://oeysan.github.io/c2z/}{https://oeysan.github.io/c2z/}
 }
 \examples{
 \donttest{
@@ -201,9 +201,11 @@ Please see
   example <- Cristin(id = "840998")
 
   # Print index using `ZoteroIndex`
-  ZoteroIndex(example$results) |>
-    dplyr::select(name) |>
-    print(width = 80)
+  if (any(nrow(example$results))) {
+    ZoteroIndex(example$results) |>
+      dplyr::select(name) |>
+      print(width = 80)
+  }
 }
 }
 \seealso{
